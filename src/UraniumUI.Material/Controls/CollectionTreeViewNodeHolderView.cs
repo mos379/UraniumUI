@@ -3,8 +3,10 @@ using UraniumUI.Extensions;
 using UraniumUI.Pages;
 using UraniumUI.Triggers;
 using UraniumUI.Views;
+using System.Collections;
 using static Microsoft.Maui.Controls.VisualStateManager;
 using Path = Microsoft.Maui.Controls.Shapes.Path;
+using System.Drawing;
 
 namespace UraniumUI.Material.Controls;
 
@@ -17,18 +19,12 @@ public class CollectionTreeViewNodeHolderView : VerticalStackLayout
 
     public CollectionTreeView TreeView { get; internal set; }
 
-    protected TreeViewNodeItemContentView nodeContainer = new TreeViewNodeItemContentView
-    {
-        //HorizontalOptions = LayoutOptions.Fill,
-        //HeightRequest = 150,
-    };
+    protected TreeViewNodeItemContentView nodeContainer = new TreeViewNodeItemContentView();
 
-    public VerticalStackLayout NodeChildren => nodeChildren;
+    public CollectionView NodeChildren => nodeChildren;
 
-    internal protected VerticalStackLayout nodeChildren = new VerticalStackLayout
-    {
-        IsVisible = false
-    };
+    internal protected CollectionView nodeChildren;
+    private Grid childContainer;
 
     public DataTemplate DataTemplate { get; }
 
@@ -36,11 +32,12 @@ public class CollectionTreeViewNodeHolderView : VerticalStackLayout
     {
         ColumnDefinitions =
         {
-            new ColumnDefinition(GridLength.Auto),
+            new ColumnDefinition(40),
             new ColumnDefinition(GridLength.Star),
         }
     };
-
+    private readonly int indentLevel;
+    private bool hasLoadedChildren;
     private BindingBase childrenBinding;
     public BindingBase ChildrenBinding
     {
@@ -48,13 +45,16 @@ public class CollectionTreeViewNodeHolderView : VerticalStackLayout
         internal set
         {
             childrenBinding = value;
-            if (ChildrenBinding is not null)
+            if (nodeChildren != null)
             {
-                nodeChildren.SetBinding(BindableLayout.ItemsSourceProperty, new Binding((ChildrenBinding as Binding)?.Path));
-            }
-            else
-            {
-                nodeChildren.RemoveBinding(BindableLayout.ItemsSourceProperty);
+                if (ChildrenBinding is Binding binding)
+                {
+                    nodeChildren.SetBinding(ItemsView.ItemsSourceProperty, new Binding(binding.Path));
+                }
+                else
+                {
+                    nodeChildren.RemoveBinding(ItemsView.ItemsSourceProperty);
+                }
             }
         }
     }
@@ -64,12 +64,13 @@ public class CollectionTreeViewNodeHolderView : VerticalStackLayout
 
     public CollectionTreeViewNodeHolderView(DataTemplate dataTemplate, CollectionTreeView treeView, BindingBase childrenBinding, int indentLevel = 0)
     {
-        if (treeView is null)
-        {
-            throw new ArgumentNullException(nameof(treeView));
-        }
+        if (indentLevel > 20) return; // prevent runaway recursion
 
-        TreeView = treeView;
+        TreeView = treeView ?? throw new ArgumentNullException(nameof(treeView));
+        treeView.RegisterNode(this);
+
+        this.indentLevel = indentLevel;
+
         DataTemplate = dataTemplate;
 
         nodeContainer.ItemTemplate = DataTemplate;
@@ -77,9 +78,6 @@ public class CollectionTreeViewNodeHolderView : VerticalStackLayout
 
         expanderView = TreeView.ExpanderTemplate?.CreateContent() as View ?? InitializeArrowExpander();
         expanderView.BindingContext = this;
-
-        //this.SetBinding(SpacingProperty, new Binding(nameof(TreeView.Spacing), source: treeView));
-        //nodeChildren.SetBinding(VerticalStackLayout.SpacingProperty, new Binding(nameof(TreeView.Spacing), source: treeView));
 
         rowStack.Add(expanderView);
         rowStack.Add(nodeContainer, column: 1);
@@ -96,30 +94,13 @@ public class CollectionTreeViewNodeHolderView : VerticalStackLayout
         };
 
         this.Add(button);
-        this.Add(nodeChildren);
-
-        if (!string.IsNullOrEmpty(TreeView.IsExpandedPropertyName))
+        if (childrenBinding is Binding binding && !string.IsNullOrEmpty(binding.Path) && TryGetInitialChildren(binding.Path, out var children) &&    children?.Cast<object>().Any() == true)
         {
-            this.SetBinding(IsExpandedProperty, new Binding(TreeView.IsExpandedPropertyName, BindingMode.TwoWay));
+            CreateChildContainer(binding);
         }
-
-        if (!string.IsNullOrEmpty(TreeView.IsLeafPropertyName))
-        {
-            this.SetBinding(IsLeafProperty, new Binding(TreeView.IsLeafPropertyName, BindingMode.TwoWay));
-        }
-
-        BindableLayout.SetItemTemplate(nodeChildren, new DataTemplate(() =>
-        {
-            var node = new CollectionTreeViewNodeHolderView(DataTemplate, TreeView, childrenBinding, indentLevel + 1);
-            node.ParentHolderView = this;
-            node.TreeView = TreeView;
-            return node;
-        }));
-
         ChildrenBinding = childrenBinding;
 
-        nodeChildren.ChildAdded += (s, e) => OnPropertyChanged(nameof(IsLeaf));
-        nodeChildren.ChildRemoved += (s, e) => OnPropertyChanged(nameof(IsLeaf));
+
     }
 
     protected virtual View InitializeArrowExpander()
@@ -225,7 +206,64 @@ public class CollectionTreeViewNodeHolderView : VerticalStackLayout
     {
         base.OnBindingContextChanged();
         OnSelectedItemChanged();
+
+        if (nodeChildren == null && ChildrenBinding is Binding binding &&
+        !string.IsNullOrEmpty(binding.Path) &&
+        TryGetInitialChildren(binding.Path, out var children) &&
+        children?.Cast<object>().Any() == true)
+        {
+            CreateChildContainer(binding);
+            // 🔥 Now that nodeChildren is created, we can safely expand
+            if (IsExpanded)
+            {
+                OnIsExpandedChanged(true);
+            }
+        }
     }
+    private void CreateChildContainer(Binding binding)
+    {
+        nodeChildren = new CollectionView
+        {
+            IsVisible = false,
+            ItemsLayout = new LinearItemsLayout(ItemsLayoutOrientation.Vertical)
+            {
+                ItemSpacing = TreeView.ItemSpacing
+            },
+            SelectionMode = SelectionMode.None
+        };
+
+        childContainer = new Grid
+        {
+            HeightRequest = 0,
+            IsVisible = false
+        };
+        childContainer.Children.Add(nodeChildren);
+        this.Add(childContainer);
+
+        if (!string.IsNullOrEmpty(TreeView.IsExpandedPropertyName))
+        {
+            this.SetBinding(IsExpandedProperty, new Binding(TreeView.IsExpandedPropertyName, BindingMode.TwoWay));
+        }
+
+        if (!string.IsNullOrEmpty(TreeView.IsLeafPropertyName))
+        {
+            this.SetBinding(IsLeafProperty, new Binding(TreeView.IsLeafPropertyName, BindingMode.TwoWay));
+        }
+
+        nodeChildren.ItemTemplate = new DataTemplate(() =>
+        {
+            var childNode = new CollectionTreeViewNodeHolderView(DataTemplate, TreeView, ChildrenBinding, this.indentLevel + 1)
+            {
+                ParentHolderView = this
+            };
+            return childNode;
+        });
+
+        nodeChildren.SetBinding(CollectionView.ItemsSourceProperty, new Binding(binding.Path));
+        nodeChildren.ChildAdded += (s, e) => OnPropertyChanged(nameof(IsLeaf));
+        nodeChildren.ChildRemoved += (s, e) => OnPropertyChanged(nameof(IsLeaf));
+    }
+
 
     protected virtual void ItemClicked()
     {
@@ -265,14 +303,23 @@ public class CollectionTreeViewNodeHolderView : VerticalStackLayout
             {
                 IsSelected = false;
             }
-
-            foreach (var childHolder in nodeChildren.Children.OfType<CollectionTreeViewNodeHolderView>())
+            if (NodeChildren?.ItemsSource is IEnumerable items)
             {
-                childHolder.OnSelectedItemChanged();
+                foreach (var item in items)
+                {
+                    var holder = FindHolderView(item);
+                    holder?.OnSelectedItemChanged();
+                }
             }
         }
     }
-
+    protected CollectionTreeViewNodeHolderView FindHolderView(object item)
+    {
+        return NodeChildren.Handler?.PlatformView is not null
+            ? TreeView.FindManyInChildrenHierarchy<CollectionTreeViewNodeHolderView>()
+                .FirstOrDefault(x => x.BindingContext == item)
+            : null;
+    }
     protected virtual void IsSelectedChanged()
     {
         var button = this.FindInChildrenHierarchy<StatefulContentView>();
@@ -383,8 +430,18 @@ public class CollectionTreeViewNodeHolderView : VerticalStackLayout
 
     protected internal virtual async void OnIsExpandedChanged(bool isExpanded)
     {
-        if (isExpanded)
+        if (isExpanded && !IsLeaf)
         {
+            if (!hasLoadedChildren && ChildrenBinding is Binding binding)
+            {
+                await MainThread.InvokeOnMainThreadAsync(() =>
+                {
+                    nodeChildren.SetBinding(CollectionView.ItemsSourceProperty, new Binding(binding.Path));
+                    this.InvalidateMeasure();
+                });
+                LoadChildrenIfNecessary();
+            }
+
             if (TreeView.UseAnimation)
             {
                 nodeChildren.IsVisible = true;
@@ -396,23 +453,28 @@ public class CollectionTreeViewNodeHolderView : VerticalStackLayout
             {
                 nodeChildren.IsVisible = true;
             }
+
+            childContainer.IsVisible = true;
+            childContainer.ClearValue(HeightRequestProperty); // Let it auto-resize naturally
         }
         else
         {
-            if (TreeView.UseAnimation)
+            if (nodeChildren != null && childContainer != null)
             {
-                nodeChildren.TranslateToSafely(0, -nodeChildren.Height).FireAndForget();
-                nodeChildren.ScaleToSafely(0).FireAndForget();
-                nodeChildren.AnchorX = 0;
-                nodeChildren.AnchorY = 0;
+                if (TreeView.UseAnimation)
+                {
+                    nodeChildren.TranslateToSafely(0, -nodeChildren.Height).FireAndForget();
+                    nodeChildren.ScaleToSafely(0).FireAndForget();
+                    nodeChildren.AnchorX = 0;
+                    nodeChildren.AnchorY = 0;
 
-                await nodeChildren.FadeToSafely(0, 50);
+                    await nodeChildren.FadeToSafely(0, 50);
+                }
+                childContainer.IsVisible = false;
+                childContainer.HeightRequest = 0;
+                nodeChildren.IsVisible = false;
             }
-
-            nodeChildren.IsVisible = false;
         }
-
-        LoadChildrenIfNecessary();
     }
 
     protected virtual void OnIsLeafChanged(bool? newValue)
@@ -425,15 +487,16 @@ public class CollectionTreeViewNodeHolderView : VerticalStackLayout
 
     protected virtual void LoadChildrenIfNecessary()
     {
-        if (!IsLeaf && !NodeChildren.Children.Any()) // TODO: And children is empty
+        if (!IsLeaf && !hasLoadedChildren && NodeChildren.ItemsSource is IEnumerable items && !items.Cast<object>().Any())
         {
-            TreeView.LoadChildrenCommand?.Execute(this.BindingContext);
+            TreeView.LoadChildrenCommand?.Execute(BindingContext);
+            hasLoadedChildren = true;
         }
     }
 
     public bool IsLeaf
     {
-        get => (bool?)GetValue(IsLeafProperty) ?? !nodeChildren.Children.Any();
+        get => (bool?)GetValue(IsLeafProperty) ?? nodeChildren == null || nodeChildren.ItemsSource is not IEnumerable items || !items.Cast<object>().Any(); 
         set => SetValue(IsLeafProperty, value);
     }
 
@@ -459,4 +522,28 @@ public class CollectionTreeViewNodeHolderView : VerticalStackLayout
     public static readonly BindableProperty IsSelectedProperty = BindableProperty.Create(
         nameof(IsSelected), typeof(bool), typeof(CollectionTreeViewNodeHolderView), false,
             propertyChanged: (bindable, oldValue, newValue) => (bindable as CollectionTreeViewNodeHolderView).IsSelectedChanged());
+
+    private bool TryGetInitialChildren(string path, out IEnumerable children)
+    {
+        children = null;
+
+        if (BindingContext == null)
+            return false;
+
+        try
+        {
+            var prop = BindingContext.GetType().GetProperty(path);
+            var value = prop?.GetValue(BindingContext);
+
+            if (value is IEnumerable list)
+            {
+                children = list;
+                return true;
+            }
+        }
+        catch { }
+
+        return false;
+    }
+
 }

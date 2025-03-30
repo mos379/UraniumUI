@@ -12,159 +12,151 @@
         <vm:TreeViewPageViewModel />
     </ContentPage.BindingContext>
     <ContentPage.Content>
-        <ScrollView>
+        <material:TabView>
+            <material:TabItem Title="Simple">
+                <material:TabItem.ContentTemplate>
+                    <DataTemplate>
+                        <material:CollectionTreeView
+                            IsExpandedPropertyName="IsExtended"
+                            IsLeafPropertyName="IsLeaf"
+                            ItemsSource="{Binding Nodes}"
+                            SelectionMode="Multiple" />
+                    </DataTemplate>
+                </material:TabItem.ContentTemplate>
+            </material:TabItem>
 
-            <VerticalStackLayout>
+            <material:TabItem Title="Templated">
+                <material:TabItem.ContentTemplate>
+                    <DataTemplate>
+                        <material:CollectionTreeView
+                            IsExpandedPropertyName="IsExtended"
+                            IsLeafPropertyName="IsLeaf"
+                            ItemsSource="{Binding Nodes}">
+                            <material:CollectionTreeView.ItemTemplate>
+                                <DataTemplate>
+                                    <HorizontalStackLayout
+                                        Margin="0,12"
+                                        Spacing="5"
+                                        VerticalOptions="Center">
+                                        <Image Source="{FontImageSource FontFamily=MaterialSharp, Glyph={x:Static m:MaterialSharp.Folder}, Color={AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}}" />
+                                        <Label FontAttributes="Bold" Text="{Binding Name}" />
+                                        <Label Text="{Binding Children.Count, StringFormat='({0})'}" />
+                                    </HorizontalStackLayout>
+                                </DataTemplate>
+                            </material:CollectionTreeView.ItemTemplate>
+                        </material:CollectionTreeView>
+                    </DataTemplate>
+                </material:TabItem.ContentTemplate>
+            </material:TabItem>
 
-                <material:TreeView
-                    Grid.Row="0"
-                    Grid.Column="0"
-                    IsExpandedPropertyName="IsExtended"
-                    ItemsSource="{Binding Nodes}"
-                    SelectionMode="Multiple" />
-
-            </VerticalStackLayout>
-        </ScrollView>
-
-        <!--<Grid ColumnDefinitions="Auto" RowDefinitions="Auto">
-            <material:TabView Grid.Row="0" Grid.Column="0">
-                <material:TabItem Title="Simple">
-                    <material:TabItem.ContentTemplate>
-                        <DataTemplate>
-                            <ScrollView Orientation="Both">
-                                <material:TreeView
-                                    IsExpandedPropertyName="IsExtended"
-                                    ItemsSource="{Binding Nodes}"
-                                    SelectionMode="Multiple" />
-                            </ScrollView>
-                        </DataTemplate>
-                    </material:TabItem.ContentTemplate>
-                </material:TabItem>
-
-                <material:TabItem Title="Templated">
-                    <material:TabItem.ContentTemplate>
-                        <DataTemplate>
-                            <ScrollView Orientation="Both">
-                                <material:CollectionTreeView ItemsSource="{Binding Nodes}">
-                                    <material:CollectionTreeView.ItemTemplate>
+            <material:TabItem Title="Template selector">
+                <material:TabItem.ContentTemplate>
+                    <DataTemplate>
+                        <material:CollectionTreeView
+                            IsExpandedPropertyName="IsExtended"
+                            IsLeafPropertyName="IsLeaf"
+                            ItemsSource="{Binding Nodes}">
+                            <material:CollectionTreeView.ItemTemplate>
+                                <vm:MyTemplateSelector>
+                                    <vm:MyTemplateSelector.TemplateDefault>
                                         <DataTemplate>
                                             <HorizontalStackLayout
-                                                Margin="0,12"
+                                                Margin="0,8"
                                                 Spacing="5"
                                                 VerticalOptions="Center">
                                                 <Image Source="{FontImageSource FontFamily=MaterialSharp, Glyph={x:Static m:MaterialSharp.Folder}, Color={AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}}" />
                                                 <Label FontAttributes="Bold" Text="{Binding Name}" />
                                                 <Label Text="{Binding Children.Count, StringFormat='({0})'}" />
+                                                <Label Text="Default Template" />
                                             </HorizontalStackLayout>
                                         </DataTemplate>
-                                    </material:CollectionTreeView.ItemTemplate>
-                                </material:CollectionTreeView>
-                            </ScrollView>
+                                    </vm:MyTemplateSelector.TemplateDefault>
+                                    <vm:MyTemplateSelector.TemplateA>
+                                        <DataTemplate>
+                                            <HorizontalStackLayout
+                                                Margin="0,8"
+                                                Spacing="5"
+                                                VerticalOptions="Center">
+                                                <Image Source="{FontImageSource FontFamily=MaterialSharp, Glyph={x:Static m:MaterialSharp.Folder}, Color={AppThemeBinding Light={StaticResource Tertiary}, Dark={StaticResource TertiaryDark}}}" />
+                                                <Label FontAttributes="Bold" Text="{Binding Name}" />
+                                                <Label Text="{Binding Children.Count, StringFormat='({0})'}" />
+                                                <Label Text="Template for A" />
+                                            </HorizontalStackLayout>
+                                        </DataTemplate>
+                                    </vm:MyTemplateSelector.TemplateA>
+                                    <vm:MyTemplateSelector.TemplateB>
+                                        <DataTemplate>
+                                            <HorizontalStackLayout
+                                                Margin="0,8"
+                                                Spacing="5"
+                                                VerticalOptions="Center">
+                                                <Image Source="{FontImageSource FontFamily=MaterialSharp, Glyph={x:Static m:MaterialSharp.Folder}, Color={AppThemeBinding Light={StaticResource Secondary}, Dark={StaticResource SecondaryDark}}}" />
+                                                <Label FontAttributes="Bold" Text="{Binding Name}" />
+                                                <Label Text="{Binding Children.Count, StringFormat='({0})'}" />
+                                                <Label Text="Template for B" />
+                                            </HorizontalStackLayout>
+                                        </DataTemplate>
+                                    </vm:MyTemplateSelector.TemplateB>
+                                    <vm:MyTemplateSelector.TemplateC>
+                                        <DataTemplate>
+                                            <HorizontalStackLayout
+                                                Margin="0,8"
+                                                Spacing="5"
+                                                VerticalOptions="Center">
+                                                <Image Source="{FontImageSource FontFamily=MaterialSharp, Glyph={x:Static m:MaterialSharp.Folder}, Color={AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}}" />
+                                                <Label FontAttributes="Bold" Text="{Binding Name}" />
+                                                <Label Text="{Binding Children.Count, StringFormat='({0})'}" />
+                                                <Label Text="Template for C" />
+                                            </HorizontalStackLayout>
+                                        </DataTemplate>
+                                    </vm:MyTemplateSelector.TemplateC>
+                                </vm:MyTemplateSelector>
+                            </material:CollectionTreeView.ItemTemplate>
+                        </material:CollectionTreeView>
+                    </DataTemplate>
+                </material:TabItem.ContentTemplate>
+            </material:TabItem>
 
-                        </DataTemplate>
-                    </material:TabItem.ContentTemplate>
-                </material:TabItem>
+            <material:TabItem Title="Expander">
+                <material:TabItem.ContentTemplate>
+                    <DataTemplate>
+                        <material:CollectionTreeView
+                            IsExpandedPropertyName="IsExtended"
+                            IsLeafPropertyName="IsLeaf"
+                            ItemsSource="{Binding Nodes}">
+                            <material:CollectionTreeView.ExpanderTemplate>
+                                <DataTemplate>
+                                    <StackLayout WidthRequest="50">
+                                        <Switch IsToggled="{Binding IsExpanded}" IsVisible="{Binding IsLeaf, Converter={x:Static root:UraniumConverters.BooleanInverter}}" />
+                                    </StackLayout>
+                                </DataTemplate>
+                            </material:CollectionTreeView.ExpanderTemplate>
+                        </material:CollectionTreeView>
+                    </DataTemplate>
+                </material:TabItem.ContentTemplate>
+            </material:TabItem>
 
-                <material:TabItem Title="Template selector">
-                    <material:TabItem.ContentTemplate>
-                        <DataTemplate>
-                            <material:CollectionTreeView ItemsSource="{Binding Nodes}">
-                                <material:CollectionTreeView.ItemTemplate>
-                                    <vm:MyTemplateSelector>
-                                        <vm:MyTemplateSelector.TemplateDefault>
-                                            <DataTemplate>
-                                                <HorizontalStackLayout
-                                                    Margin="0,8"
-                                                    Spacing="5"
-                                                    VerticalOptions="Center">
-                                                    <Image Source="{FontImageSource FontFamily=MaterialSharp, Glyph={x:Static m:MaterialSharp.Folder}, Color={AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}}" />
-                                                    <Label FontAttributes="Bold" Text="{Binding Name}" />
-                                                    <Label Text="{Binding Children.Count, StringFormat='({0})'}" />
-                                                    <Label Text="Default Template" />
-                                                </HorizontalStackLayout>
-                                            </DataTemplate>
-                                        </vm:MyTemplateSelector.TemplateDefault>
-                                        <vm:MyTemplateSelector.TemplateA>
-                                            <DataTemplate>
-                                                <HorizontalStackLayout
-                                                    Margin="0,8"
-                                                    Spacing="5"
-                                                    VerticalOptions="Center">
-                                                    <Image Source="{FontImageSource FontFamily=MaterialSharp, Glyph={x:Static m:MaterialSharp.Folder}, Color={AppThemeBinding Light={StaticResource Tertiary}, Dark={StaticResource TertiaryDark}}}" />
-                                                    <Label FontAttributes="Bold" Text="{Binding Name}" />
-                                                    <Label Text="{Binding Children.Count, StringFormat='({0})'}" />
-                                                    <Label Text="Template for A" />
-                                                </HorizontalStackLayout>
-                                            </DataTemplate>
-                                        </vm:MyTemplateSelector.TemplateA>
-                                        <vm:MyTemplateSelector.TemplateB>
-                                            <DataTemplate>
-                                                <HorizontalStackLayout
-                                                    Margin="0,8"
-                                                    Spacing="5"
-                                                    VerticalOptions="Center">
-                                                    <Image Source="{FontImageSource FontFamily=MaterialSharp, Glyph={x:Static m:MaterialSharp.Folder}, Color={AppThemeBinding Light={StaticResource Secondary}, Dark={StaticResource SecondaryDark}}}" />
-                                                    <Label FontAttributes="Bold" Text="{Binding Name}" />
-                                                    <Label Text="{Binding Children.Count, StringFormat='({0})'}" />
-                                                    <Label Text="Template for B" />
-                                                </HorizontalStackLayout>
-                                            </DataTemplate>
-                                        </vm:MyTemplateSelector.TemplateB>
-                                        <vm:MyTemplateSelector.TemplateC>
-                                            <DataTemplate>
-                                                <HorizontalStackLayout
-                                                    Margin="0,8"
-                                                    Spacing="5"
-                                                    VerticalOptions="Center">
-                                                    <Image Source="{FontImageSource FontFamily=MaterialSharp, Glyph={x:Static m:MaterialSharp.Folder}, Color={AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}}" />
-                                                    <Label FontAttributes="Bold" Text="{Binding Name}" />
-                                                    <Label Text="{Binding Children.Count, StringFormat='({0})'}" />
-                                                    <Label Text="Template for C" />
-                                                </HorizontalStackLayout>
-                                            </DataTemplate>
-                                        </vm:MyTemplateSelector.TemplateC>
-                                    </vm:MyTemplateSelector>
-                                </material:CollectionTreeView.ItemTemplate>
-                            </material:CollectionTreeView>
-                        </DataTemplate>
-                    </material:TabItem.ContentTemplate>
-                </material:TabItem>
+            <material:TabItem Title="Selection">
+                <material:TabItem.ContentTemplate>
+                    <DataTemplate>
+                        <material:CollectionTreeView
+                            IsExpandedPropertyName="IsExtended"
+                            IsLeafPropertyName="IsLeaf"
+                            ItemsSource="{Binding Nodes}">
+                            <material:CollectionTreeView.ItemTemplate>
+                                <DataTemplate>
+                                    <material:CheckBox Margin="10" Text="{Binding Name}">
+                                        <material:CheckBox.Behaviors>
+                                            <material:CollectionTreeViewHierarchicalSelectBehavior />
+                                        </material:CheckBox.Behaviors>
+                                    </material:CheckBox>
+                                </DataTemplate>
+                            </material:CollectionTreeView.ItemTemplate>
+                        </material:CollectionTreeView>
+                    </DataTemplate>
+                </material:TabItem.ContentTemplate>
+            </material:TabItem>
+        </material:TabView>
 
-                <material:TabItem Title="Expander">
-                    <material:TabItem.ContentTemplate>
-                        <DataTemplate>
-                            <material:CollectionTreeView IsExpandedPropertyName="IsExtended" ItemsSource="{Binding Nodes}">
-                                <material:CollectionTreeView.ExpanderTemplate>
-                                    <DataTemplate>
-                                        <StackLayout WidthRequest="50">
-                                            <Switch IsToggled="{Binding IsExpanded}" IsVisible="{Binding IsLeaf, Converter={x:Static root:UraniumConverters.BooleanInverter}}" />
-                                        </StackLayout>
-                                    </DataTemplate>
-                                </material:CollectionTreeView.ExpanderTemplate>
-                            </material:CollectionTreeView>
-                        </DataTemplate>
-                    </material:TabItem.ContentTemplate>
-                </material:TabItem>
-
-                <material:TabItem Title="Selection">
-                    <material:TabItem.ContentTemplate>
-                        <DataTemplate>
-                            <material:CollectionTreeView IsExpandedPropertyName="IsExtended" ItemsSource="{Binding Nodes}">
-                                <material:CollectionTreeView.ItemTemplate>
-                                    <DataTemplate>
-                                        <material:CheckBox Margin="10" Text="{Binding Name}">
-                                            <material:CheckBox.Behaviors>
-                                                <material:TreeViewHierarchicalSelectBehavior />
-                                            </material:CheckBox.Behaviors>
-                                        </material:CheckBox>
-                                    </DataTemplate>
-                                </material:CollectionTreeView.ItemTemplate>
-                            </material:CollectionTreeView>
-                        </DataTemplate>
-                    </material:TabItem.ContentTemplate>
-                </material:TabItem>
-            </material:TabView>
-
-        </Grid>-->
     </ContentPage.Content>
 </ContentPage>

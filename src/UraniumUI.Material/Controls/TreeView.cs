@@ -21,6 +21,9 @@ public partial class TreeView : ContentView
     private readonly CollectionView rootView;
     private bool isTemplateUpdating;
     private DataTemplate nodeTemplate;
+    private object previousSelectedItem;
+
+    public event EventHandler<TreeViewSelectionChangedEventArgs> SelectionChanged;
 
     internal void RegisterNode(TreeViewNodeHolderView node)
     {
@@ -58,7 +61,6 @@ public partial class TreeView : ContentView
         }
     }
 
-    // TODO: Remove default value and make default value as null in the next major version.
     private BindingBase childrenBinding = new Binding("Children");
     public BindingBase ChildrenBinding
     {
@@ -141,6 +143,12 @@ public partial class TreeView : ContentView
         {
             childHolder.OnSelectedItemChanged();
         }
+
+        SelectionChanged?.Invoke(this, new TreeViewSelectionChangedEventArgs(
+            new List<object> { previousSelectedItem },
+            new List<object> { SelectedItem }));
+
+        previousSelectedItem = SelectedItem;
     }
 
     protected virtual void OnSelectedItemsChanged(IList oldValue, IList newValue)
@@ -158,6 +166,10 @@ public partial class TreeView : ContentView
                 childNode.IsSelected = true;
             }
         }
+
+        SelectionChanged?.Invoke(this, new TreeViewSelectionChangedEventArgs(
+            oldValue?.Cast<object>()?.ToList() ?? new List<object>(),
+            newValue?.Cast<object>()?.ToList() ?? new List<object>()));
     }
 
     private void SelectedItemsChanged(object sender, NotifyCollectionChangedEventArgs e)
